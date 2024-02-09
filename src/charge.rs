@@ -1,8 +1,9 @@
 use bevy::{ecs::system::Resource, math::Vec2};
+use serde::{Deserialize, Serialize};
 
 use crate::vector_field::VectorField;
 
-#[derive(Resource, Clone)]
+#[derive(Resource, Clone, Deserialize, Serialize)]
 pub struct Charges {
     pub charges: Vec<Charge>,
 }
@@ -70,7 +71,7 @@ impl Charges {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Charge {
     q: f32,
     p: Vec2,

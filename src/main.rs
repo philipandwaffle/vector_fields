@@ -1,10 +1,16 @@
 use bevy::{math::vec2, prelude::*, window::WindowMode};
 use cam::CamPlugin;
 use charge::{Charge, Charges};
+use initializer::Initializer;
+use json_parser::JSONParser;
+use systems::{electric_field_system, SystemStatus};
 use vector_field::VectorField;
 
 mod cam;
 mod charge;
+mod initializer;
+mod json_parser;
+mod systems;
 mod utils;
 mod vector_field;
 
@@ -23,11 +29,16 @@ fn main() {
         Charge::new(10.0, vec2(100.0, 0.0), vec2(0.0, -0.6)),
     ]);
 
+    if let Err(e) = JSONParser::save("assets/config/test.json", &a) {
+        panic!("{:?}", e)
+    }
+
     app.insert_resource(Msaa::Sample4)
         .insert_resource(VectorField::new([29, 19], 2))
         .insert_resource(a)
+        .insert_resource(SystemStatus::default())
         .add_systems(Startup, init_vector_field)
-        .add_systems(Update, (update_field, update_arrows, move_charges).chain())
+        .add_systems(Update, electric_field_system())
         .add_plugins((
             DefaultPlugins
                 .set(WindowPlugin {
@@ -59,24 +70,4 @@ fn init_vector_field(
 ) {
     let arrow_texture = asset_server.load("white_arrow.png");
     vector_field.init(&mut commands, arrow_texture, 50.0, 20.0);
-}
-
-fn update_field(mut vector_field: ResMut<VectorField>, charges: Res<Charges>) {
-    charges.apply_to_field(&mut vector_field);
-}
-fn update_arrows(
-    vector_field: Res<VectorField>,
-    mut sprite_query: Query<(&mut Sprite, &mut Transform)>,
-) {
-    if let Err(e) = vector_field.update_sprites(&mut sprite_query) {
-        print!("Error updating vector field sprites {}", e);
-    }
-}
-fn move_charges(mut charges: ResMut<Charges>, vf: Res<VectorField>) {
-    let time_scale = 10.0;
-    let [width, height] = vf.get_shape();
-    let bl = vf.coords[0][0];
-    let tr = vf.coords[height - 1][width - 1];
-    charges.update_velocities(time_scale);
-    charges.move_charges(time_scale, [bl.x, tr.x, bl.y, tr.y]);
 }
