@@ -1,6 +1,7 @@
 use std::vec;
 
 use bevy::{
+    app::{App, Update},
     ecs::{
         schedule::{IntoSystemConfigs, NodeConfigs},
         system::{Query, Res, ResMut, Resource, System},
@@ -13,23 +14,34 @@ use crate::{charge::Charges, setting::Settings, vector_field::VectorField};
 
 #[derive(Resource)]
 pub struct SystemStatus {
-    electric_field: bool,
+    update_field: bool,
+    move_charges: bool,
 }
 impl Default for SystemStatus {
     fn default() -> Self {
         Self {
-            electric_field: true,
+            update_field: true,
+            move_charges: true,
         }
     }
 }
 
-pub fn electric_field_system() -> NodeConfigs<Box<dyn System<In = (), Out = ()>>> {
-    return (update_field, update_arrows, move_charges)
-        .chain()
-        .run_if(run_electric_field);
+pub fn electric_field_system(app: &mut App) {
+    app.add_systems(
+        Update,
+        (update_field, update_arrows)
+            .chain()
+            .run_if(if_update_field),
+    );
+    app.add_systems(Update, move_charges.run_if(if_move_charges));
 }
-fn run_electric_field(status: Res<SystemStatus>, vector_field: Option<Res<VectorField>>) -> bool {
-    return status.electric_field && vector_field.is_some();
+
+fn if_update_field(
+    status: Res<SystemStatus>,
+    vector_field: Option<Res<VectorField>>,
+    charges: Option<Res<Charges>>,
+) -> bool {
+    return status.update_field && vector_field.is_some() && charges.is_some();
 }
 fn update_field(mut vector_field: ResMut<VectorField>, charges: Res<Charges>) {
     charges.apply_to_field(&mut vector_field);
@@ -41,6 +53,10 @@ fn update_arrows(
     if let Err(e) = vector_field.update_sprites(&mut sprite_query) {
         print!("Error updating vector field sprites {}", e);
     }
+}
+
+fn if_move_charges(status: Res<SystemStatus>, charges: Option<Res<Charges>>) -> bool {
+    return status.move_charges && charges.is_some();
 }
 fn move_charges(
     mut charges: ResMut<Charges>,

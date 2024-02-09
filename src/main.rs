@@ -24,6 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let settings = Settings::load()?;
     let resolution = settings.display.clone().as_resolution();
     let charges = JSONParser::load::<Charges>("assets/saves/charges.json")?;
+    electric_field_system(&mut app);
 
     app.insert_resource(Msaa::Sample4)
         .insert_resource(settings)
@@ -31,7 +32,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .insert_resource(charges)
         .insert_resource(SystemStatus::default())
         .add_systems(Startup, init_vector_field)
-        .add_systems(Update, electric_field_system())
         .add_plugins((
             DefaultPlugins
                 .set(WindowPlugin {
