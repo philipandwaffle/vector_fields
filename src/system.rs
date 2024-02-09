@@ -1,3 +1,5 @@
+use std::vec;
+
 use bevy::{
     ecs::{
         schedule::{IntoSystemConfigs, NodeConfigs},
@@ -7,7 +9,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-use crate::{charge::Charges, vector_field::VectorField};
+use crate::{charge::Charges, setting::Settings, vector_field::VectorField};
 
 #[derive(Resource)]
 pub struct SystemStatus {
@@ -26,8 +28,8 @@ pub fn electric_field_system() -> NodeConfigs<Box<dyn System<In = (), Out = ()>>
         .chain()
         .run_if(run_electric_field);
 }
-fn run_electric_field(status: Res<SystemStatus>) -> bool {
-    return status.electric_field;
+fn run_electric_field(status: Res<SystemStatus>, vector_field: Option<Res<VectorField>>) -> bool {
+    return status.electric_field && vector_field.is_some();
 }
 fn update_field(mut vector_field: ResMut<VectorField>, charges: Res<Charges>) {
     charges.apply_to_field(&mut vector_field);
@@ -40,11 +42,16 @@ fn update_arrows(
         print!("Error updating vector field sprites {}", e);
     }
 }
-fn move_charges(mut charges: ResMut<Charges>, vf: Res<VectorField>) {
-    let time_scale = 10.0;
-    let [width, height] = vf.get_shape();
-    let bl = vf.coords[0][0];
-    let tr = vf.coords[height - 1][width - 1];
+fn move_charges(
+    mut charges: ResMut<Charges>,
+    vector_field: Res<VectorField>,
+    settings: Res<Settings>,
+) {
+    let time_scale = settings.simulation.time_scale;
+
+    let [width, height] = vector_field.get_shape();
+    let bl = vector_field.coords[0][0];
+    let tr = vector_field.coords[height - 1][width - 1];
     charges.update_velocities(time_scale);
     charges.move_charges(time_scale, [bl.x, tr.x, bl.y, tr.y]);
 }

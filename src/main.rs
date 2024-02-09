@@ -1,41 +1,34 @@
+use std::error::Error;
+
 use bevy::{math::vec2, prelude::*, window::WindowMode};
 use cam::CamPlugin;
 use charge::{Charge, Charges};
 use initializer::Initializer;
 use json_parser::JSONParser;
-use systems::{electric_field_system, SystemStatus};
+use setting::Settings;
+use system::{electric_field_system, SystemStatus};
 use vector_field::VectorField;
 
 mod cam;
 mod charge;
 mod initializer;
 mod json_parser;
-mod systems;
+mod setting;
+mod system;
 mod utils;
 mod vector_field;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let mut app = App::new();
 
-    // let a = Charges::new(vec![
-    //     Charge::new(-1.0, vec2(-100.0, 0.0), vec2(0.0, 0.5)),
-    //     Charge::new(1.0, vec2(0.0, 100.0), vec2(0.5, 0.0)),
-    //     Charge::new(1.0, vec2(100.0, 0.0), vec2(0.0, -0.5)),
-    //     Charge::new(-1.0, vec2(0.0, -100.0), vec2(-0.5, 0.5)),
-    // ]);
-
-    let a = Charges::new(vec![
-        Charge::new(-10.0, vec2(-100.0, 0.0), vec2(0.0, 0.6)),
-        Charge::new(10.0, vec2(100.0, 0.0), vec2(0.0, -0.6)),
-    ]);
-
-    if let Err(e) = JSONParser::save("assets/config/test.json", &a) {
-        panic!("{:?}", e)
-    }
+    let settings = Settings::load()?;
+    let resolution = settings.display.clone().as_resolution();
+    let charges = JSONParser::load::<Charges>("assets/saves/charges.json")?;
 
     app.insert_resource(Msaa::Sample4)
+        .insert_resource(settings)
         .insert_resource(VectorField::new([29, 19], 2))
-        .insert_resource(a)
+        .insert_resource(charges)
         .insert_resource(SystemStatus::default())
         .add_systems(Startup, init_vector_field)
         .add_systems(Update, electric_field_system())
@@ -44,7 +37,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Particle Sim".into(),
-                        resolution: (1900., 1280.).into(),
+                        resolution: resolution.into(),
                         // present_mode: PresentMode::AutoVsync,
                         mode: WindowMode::BorderlessFullscreen,
                         // Tells wasm to resize the window according to the available canvas
@@ -61,13 +54,18 @@ fn main() {
         ));
 
     app.run();
+
+    Ok(())
 }
 
 fn init_vector_field(
     mut commands: Commands,
     mut vector_field: ResMut<VectorField>,
     asset_server: Res<AssetServer>,
+    settings: Res<Settings>,
 ) {
-    let arrow_texture = asset_server.load("white_arrow.png");
-    vector_field.init(&mut commands, arrow_texture, 50.0, 20.0);
+    let vector = settings.simulation.vector.clone();
+    let arrow_texture = asset_server.load(vector.texture);
+
+    vector_field.init(&mut commands, arrow_texture, vector.spacing, vector.size);
 }

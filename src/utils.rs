@@ -10,5 +10,5 @@ pub fn dir_to_quat(dir: Vec2) -> Quat {
 }
 
 pub fn mag_to_color(mag: f32) -> Color {
-    return Color::hsla((f32::tanh(mag * 200.0) * 180.0) + 180.0, 0.5, 0.5, 1.0);
+    return Color::hsla((f32::tanh(mag) * 180.0) + 180.0, 0.5, 0.5, 1.0);
 }

@@ -62,8 +62,7 @@ impl VectorField {
                     (x as f32) - (width as f32 / 2.0),
                     (y as f32) - (height as f32 / 2.0),
                     0.0,
-                ) * spacing
-                    / self.resolution as f32;
+                ) / self.resolution as f32;
 
                 let sprite_ent = commands
                     .spawn(SpriteBundle {
@@ -78,7 +77,7 @@ impl VectorField {
                             ..default()
                         },
                         texture: arrow_texture.clone(),
-                        transform: Transform::from_translation(coord),
+                        transform: Transform::from_translation(coord * spacing),
                         ..default()
                     })
                     .id();
