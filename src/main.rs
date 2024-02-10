@@ -8,6 +8,7 @@ use cam::CamPlugin;
 use charge::{Charge, Charges};
 use initializer::Initializer;
 use json_parser::JSONParser;
+use scene_manager::{charge_editor::ChargeEditor, ui_elements::UIPlugin};
 use setting::Settings;
 use system::{electric_field_system, SystemStatus};
 use vector_field::VectorField;
@@ -59,6 +60,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // don't use linear sampling as image textures will be blurry
                 .set(ImagePlugin::default_nearest()),
             CamPlugin,
+            ChargeEditor,
+            UIPlugin,
         ));
 
     app.run();
