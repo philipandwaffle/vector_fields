@@ -45,8 +45,8 @@ pub struct Simulation {
 
 #[derive(Copy, Clone, Deserialize, Serialize)]
 pub struct Field {
-    pub size: Vec2,
-    pub resolution: f32,
+    pub size: [usize; 2],
+    pub resolution: usize,
 }
 
 #[derive(Clone, Deserialize, Serialize)]

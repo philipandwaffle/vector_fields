@@ -31,7 +31,7 @@ impl Charges {
 
         for cur_i in 0..num_charges {
             let cur_charge = &mut self.charges[cur_i];
-            let mut vel = Vec2::ZERO;
+            let mut acc = Vec2::ZERO;
 
             for comp_i in 0..num_charges {
                 let compare_charge = &comp_charges[comp_i];
@@ -40,9 +40,9 @@ impl Charges {
                     continue;
                 }
 
-                vel -= cur_charge.calc_e_force(compare_charge.q, compare_charge.p);
+                acc -= cur_charge.calc_e_force(compare_charge.q, compare_charge.p) / cur_charge.m;
             }
-            cur_charge.v += vel * dt;
+            cur_charge.v += acc * dt;
         }
     }
 
@@ -74,12 +74,13 @@ impl Charges {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Charge {
     q: f32,
+    m: f32,
     p: Vec2,
     v: Vec2,
 }
 impl Charge {
-    pub fn new(q: f32, p: Vec2, v: Vec2) -> Self {
-        return Self { q, p, v };
+    pub fn new(q: f32, m: f32, p: Vec2, v: Vec2) -> Self {
+        return Self { q, m, p, v };
     }
 
     pub fn calc_e_force(&self, b_q: f32, b_p: Vec2) -> Vec2 {
