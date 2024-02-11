@@ -1,47 +1,49 @@
 use bevy::{
-    app::{Plugin, Update},
+    app::{Plugin, Startup},
     ecs::system::Commands,
     hierarchy::BuildChildren,
     prelude::default,
-    render::color::Color,
     ui::{node_bundles::NodeBundle, JustifyContent, Style, Val},
 };
 
-use super::ui_elements::ButtonBuilder;
+use super::ui_elements::{ButtonBuilder, ButtonGroupBuilder};
 
 #[derive()]
 pub struct ChargeEditor;
 impl Plugin for ChargeEditor {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(Update, setup);
+        app.add_systems(Startup, setup);
     }
 }
 
 fn setup(mut commands: Commands) {
+    let (button_width, button_height) = (24.5, 95.0);
+    let button_builder = ButtonBuilder::new(
+        Some("normal_text".to_string()),
+        Some("hover_text".to_string()),
+        Some("pressed_text".to_string()),
+        button_width,
+        button_height,
+    );
+
+    let (group_width, group_height) = (100.0, 20.0);
+    let grouped_button_builder =
+        ButtonGroupBuilder::new(4, group_width, group_height, button_builder);
+
+    let (mut button_group_ent, mut button_ents) = (None, None);
     commands
         .spawn(NodeBundle {
             style: Style {
                 width: Val::Percent(100.0),
-                height: Val::Percent(20.0),
+                height: Val::Percent(100.0),
                 justify_content: JustifyContent::SpaceEvenly,
                 ..default()
             },
-            background_color: Color::hsla(180.0, 0.5, 0.5, 1.0).into(),
             ..default()
         })
         .with_children(|p| {
-            // let justify = JustifyContent::SpaceEvenly;
-            let (width, height) = (24.5, 95.0);
-            let builder = ButtonBuilder::new(
-                Some("normal_text".to_string()),
-                Some("hover_text".to_string()),
-                Some("pressed_text".to_string()),
-                width,
-                height,
-            );
-            p.spawn(builder.build());
-            p.spawn(builder.build());
-            p.spawn(builder.build());
-            p.spawn(builder.build());
+            let (temp_button_group_ent, temp_button_ents) = grouped_button_builder.build(p);
+            (button_group_ent, button_ents) = (Some(temp_button_group_ent), Some(temp_button_ents));
         });
+    ButtonGroupBuilder::assign_button_group_component(&mut commands, button_group_ent, button_ents);
 }

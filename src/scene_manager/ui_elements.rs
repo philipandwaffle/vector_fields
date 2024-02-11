@@ -1,67 +1,212 @@
+use std::usize;
+
 use bevy::{
     app::{Plugin, Update},
     ecs::{
         component::Component,
+        entity::Entity,
         query::{Changed, With},
-        system::Query,
+        system::{Commands, Query},
     },
-    hierarchy::Children,
+    hierarchy::{BuildChildren, ChildBuilder, Children},
     prelude::default,
     render::color::Color,
-    text::Text,
+    text::{Text, TextStyle},
     ui::{
-        node_bundles::ButtonBundle, widget::Button, BackgroundColor, BorderColor, Interaction,
-        JustifyContent, Style, Val,
+        node_bundles::{ButtonBundle, NodeBundle, TextBundle},
+        widget::Button,
+        BackgroundColor, BorderColor, Interaction, JustifyContent, Style, Val,
     },
 };
 
 const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
 const PRESSED_BUTTON: Color = Color::rgb(0.35, 0.75, 0.35);
+const BACKGROUND_COLOR: Color = Color::hsla(180.0, 0.5, 0.5, 1.0);
+const BORDER_COLOR: Color = Color::BLACK;
 
 pub struct UIPlugin;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_systems(Update, button_system);
+        app.add_systems(
+            Update,
+            (
+                update_grouped_button,
+                update_button_cosmetics,
+                update_grouped_button_cosmetics,
+            ),
+        );
     }
 }
-fn button_system(
+fn update_button_cosmetics(
     mut interaction_query: Query<
-        (&ButtonMeta, &Interaction, &mut BackgroundColor, &Children),
-        (Changed<Interaction>, With<Button>),
+        (
+            &ButtonMeta,
+            &mut BackgroundColor,
+            &mut BorderColor,
+            &Children,
+        ),
+        (Changed<ButtonMeta>, With<Button>),
     >,
     mut text_query: Query<&mut Text>,
 ) {
-    for (meta, interaction, mut color, children) in &mut interaction_query {
+    for (meta, mut back_color, mut border_color, children) in interaction_query.iter_mut() {
         let mut text = text_query.get_mut(children[0]).unwrap();
-        match *interaction {
-            Interaction::Pressed => {
-                *color = PRESSED_BUTTON.into();
-                // border_color.0 = Color::RED;
-                if let Some(txt) = meta.pressed_text.clone() {
-                    text.sections[0].value = txt;
+
+        match meta.cosmetic_state {
+            CosmeticState::Pressed => {
+                *back_color = PRESSED_BUTTON.into();
+                border_color.0 = Color::RED;
+                if let Some(txt) = &meta.pressed_text {
+                    text.sections[0].value = txt.clone();
                 }
             }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-                // border_color.0 = Color::WHITE;
-                if let Some(txt) = meta.hover_text.clone() {
-                    text.sections[0].value = txt;
+            CosmeticState::Hovered => {
+                *back_color = HOVERED_BUTTON.into();
+                if let Some(txt) = &meta.hover_text {
+                    text.sections[0].value = txt.clone();
                 }
             }
-            Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-                // border_color.0 = Color::BLACK;
-                if let Some(txt) = meta.normal_text.clone() {
-                    text.sections[0].value = txt;
+            CosmeticState::None => {
+                *back_color = NORMAL_BUTTON.into();
+                border_color.0 = Color::BLACK;
+                if let Some(txt) = &meta.normal_text {
+                    text.sections[0].value = txt.clone();
                 }
             }
         }
     }
 }
 
+fn update_grouped_button_cosmetics(
+    groups: Query<&ButtonGroup, Changed<ButtonGroup>>,
+    mut buttons: Query<(&mut ButtonMeta, &GroupedButton)>,
+) {
+    for group in groups.iter() {
+        for button_ent in group.button_ents.iter() {
+            match buttons.get_mut(*button_ent) {
+                Ok((mut meta, grouped_button)) => {
+                    if group.cur_button.is_some() && grouped_button.id == group.cur_button.unwrap()
+                    {
+                        meta.cosmetic_state = CosmeticState::Pressed;
+                    } else {
+                        meta.cosmetic_state = CosmeticState::None;
+                    }
+                }
+                Err(err) => panic!("Button in group doesn't exist: {:?}", err),
+            }
+        }
+    }
+}
+
+fn update_grouped_button(
+    mut groups: Query<&mut ButtonGroup>,
+    interaction_query: Query<(&GroupedButton, &Interaction), (Changed<Interaction>, With<Button>)>,
+) {
+    for mut button_group in groups.iter_mut() {
+        let button_ents = button_group.button_ents.clone();
+        for button_ent in button_ents.iter() {
+            let (grouped_button, interaction) = match interaction_query.get(*button_ent) {
+                Ok(res) => res,
+                Err(_) => continue,
+            };
+
+            if *interaction == Interaction::Pressed {
+                (*button_group).set_cur_button(Some(grouped_button.id));
+            }
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct ButtonGroup {
+    cur_button: Option<usize>,
+    button_ents: Vec<Entity>,
+}
+impl ButtonGroup {
+    pub fn new(cur_button: Option<usize>, button_ents: Vec<Entity>) -> Self {
+        Self {
+            cur_button,
+            button_ents,
+        }
+    }
+
+    pub fn set_cur_button(&mut self, cur_button: Option<usize>) {
+        self.cur_button = cur_button;
+    }
+}
+
+#[derive(Clone, Component)]
+pub struct GroupedButton {
+    id: usize,
+}
+
+pub struct ButtonGroupBuilder {
+    num_buttons: usize,
+    width: f32,
+    height: f32,
+    button_builder: ButtonBuilder,
+}
+impl ButtonGroupBuilder {
+    pub fn new(num_buttons: usize, width: f32, height: f32, button_builder: ButtonBuilder) -> Self {
+        Self {
+            num_buttons,
+            width,
+            height,
+            button_builder,
+        }
+    }
+
+    pub fn build(&self, cb: &mut ChildBuilder) -> (Entity, Vec<Entity>) {
+        let mut button_ents = Vec::with_capacity(self.num_buttons);
+        let mut button_group = cb.spawn(NodeBundle {
+            style: Style {
+                width: Val::Percent(self.width),
+                height: Val::Percent(self.height),
+                justify_content: JustifyContent::SpaceEvenly,
+                ..default()
+            },
+            background_color: BACKGROUND_COLOR.into(),
+            ..default()
+        });
+        let button_group_ent = button_group.id();
+
+        button_group.with_children(|p| {
+            for id in 0..self.num_buttons {
+                button_ents.push(self.button_builder.build_grouped(p, id));
+            }
+        });
+
+        (button_group_ent, button_ents)
+    }
+
+    // This is moronic but can't think of a better way to do this rn
+    // TODO Figure out a better way to do this
+    pub fn assign_button_group_component(
+        commands: &mut Commands,
+        button_group_ent: Option<Entity>,
+        button_ents: Option<Vec<Entity>>,
+    ) {
+        if let Some(button_ents) = button_ents {
+            if let Some(button_group_ent) = button_group_ent {
+                commands
+                    .entity(button_group_ent)
+                    .insert(ButtonGroup::new(None, button_ents));
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum CosmeticState {
+    Pressed,
+    Hovered,
+    None,
+}
+
 #[derive(Clone, Component)]
 pub struct ButtonMeta {
+    cosmetic_state: CosmeticState,
     normal_text: Option<String>,
     hover_text: Option<String>,
     pressed_text: Option<String>,
@@ -83,6 +228,7 @@ impl ButtonBuilder {
     ) -> Self {
         Self {
             meta: ButtonMeta {
+                cosmetic_state: CosmeticState::None,
                 normal_text,
                 hover_text,
                 pressed_text,
@@ -92,21 +238,53 @@ impl ButtonBuilder {
         }
     }
 
-    pub fn build(&self) -> (ButtonBundle, ButtonMeta) {
-        return (
-            ButtonBundle {
-                button: bevy::ui::widget::Button,
-                style: Style {
-                    width: Val::Percent(self.width),
-                    height: Val::Percent(self.height),
-                    bottom: Val::Percent((self.height - 100.0) / 2.0),
-                    justify_content: JustifyContent::SpaceEvenly,
-                    ..default()
-                },
-                background_color: NORMAL_BUTTON.into(),
+    fn get_button_bundle(&self) -> ButtonBundle {
+        ButtonBundle {
+            button: bevy::ui::widget::Button,
+            style: Style {
+                width: Val::Percent(self.width),
+                height: Val::Percent(self.height),
+                bottom: Val::Percent((self.height - 100.0) / 2.0),
+                justify_content: JustifyContent::SpaceEvenly,
                 ..default()
             },
-            self.meta.clone(),
-        );
+            background_color: NORMAL_BUTTON.into(),
+            border_color: BORDER_COLOR.into(),
+            ..default()
+        }
+    }
+    fn get_text_bundle(&self) -> TextBundle {
+        let text = match &self.meta.normal_text {
+            Some(t) => t.clone(),
+            None => "".to_string(),
+        };
+
+        TextBundle::from_section(
+            text,
+            TextStyle {
+                font_size: 40.0,
+                color: Color::rgb(0.9, 0.9, 0.9),
+                ..default()
+            },
+        )
+    }
+    fn get_id(&self, id: usize) -> GroupedButton {
+        GroupedButton { id }
+    }
+
+    pub fn build(&self, cb: &mut ChildBuilder) -> Entity {
+        cb.spawn((self.get_button_bundle(), self.meta.clone()))
+            .with_children(|p| {
+                p.spawn(self.get_text_bundle());
+            })
+            .id()
+    }
+
+    pub fn build_grouped(&self, cb: &mut ChildBuilder, id: usize) -> Entity {
+        cb.spawn((self.get_button_bundle(), self.meta.clone(), self.get_id(id)))
+            .with_children(|p| {
+                p.spawn(self.get_text_bundle());
+            })
+            .id()
     }
 }
