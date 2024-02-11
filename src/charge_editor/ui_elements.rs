@@ -142,15 +142,20 @@ pub struct GroupedButton {
 }
 
 pub struct ButtonGroupBuilder {
-    num_buttons: usize,
+    text: Vec<[String; 2]>,
     width: f32,
     height: f32,
     button_builder: ButtonBuilder,
 }
 impl ButtonGroupBuilder {
-    pub fn new(num_buttons: usize, width: f32, height: f32, button_builder: ButtonBuilder) -> Self {
+    pub fn new(
+        text: Vec<[String; 2]>,
+        width: f32,
+        height: f32,
+        button_builder: ButtonBuilder,
+    ) -> Self {
         Self {
-            num_buttons,
+            text,
             width,
             height,
             button_builder,
@@ -158,7 +163,7 @@ impl ButtonGroupBuilder {
     }
 
     pub fn build(&self, cb: &mut ChildBuilder) -> (Entity, Vec<Entity>) {
-        let mut button_ents = Vec::with_capacity(self.num_buttons);
+        let mut button_ents = Vec::with_capacity(self.text.len());
         let mut button_group = cb.spawn(NodeBundle {
             style: Style {
                 width: Val::Percent(self.width),
@@ -172,8 +177,18 @@ impl ButtonGroupBuilder {
         let button_group_ent = button_group.id();
 
         button_group.with_children(|p| {
-            for id in 0..self.num_buttons {
-                button_ents.push(self.button_builder.build_grouped(p, id));
+            for i in 0..self.text.len() {
+                let [normal, pressed] = self.text[i].clone();
+                button_ents.push(self.button_builder.build_grouped(
+                    p,
+                    i,
+                    ButtonMeta {
+                        cosmetic_state: CosmeticState::None,
+                        normal_text: Some(normal),
+                        hover_text: None,
+                        pressed_text: Some(pressed),
+                    },
+                ));
             }
         });
 
@@ -280,8 +295,8 @@ impl ButtonBuilder {
             .id()
     }
 
-    pub fn build_grouped(&self, cb: &mut ChildBuilder, id: usize) -> Entity {
-        cb.spawn((self.get_button_bundle(), self.meta.clone(), self.get_id(id)))
+    pub fn build_grouped(&self, cb: &mut ChildBuilder, id: usize, meta: ButtonMeta) -> Entity {
+        cb.spawn((self.get_button_bundle(), meta.clone(), self.get_id(id)))
             .with_children(|p| {
                 p.spawn(self.get_text_bundle());
             })

@@ -8,9 +8,19 @@ use bevy::{
 
 use super::ui_elements::{ButtonBuilder, ButtonGroupBuilder};
 
+pub enum ChargeEditorMode {
+    Create,
+    Move,
+    Velocity,
+    Charge,
+}
 #[derive()]
-pub struct ChargeEditor;
-impl Plugin for ChargeEditor {
+pub struct ChargeEditorState {
+    mode: ChargeEditorMode,
+}
+
+pub struct ChargeEditorPlugin;
+impl Plugin for ChargeEditorPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_systems(Startup, setup);
     }
@@ -27,8 +37,17 @@ fn setup(mut commands: Commands) {
     );
 
     let (group_width, group_height) = (100.0, 20.0);
-    let grouped_button_builder =
-        ButtonGroupBuilder::new(4, group_width, group_height, button_builder);
+    let grouped_button_builder = ButtonGroupBuilder::new(
+        vec![
+            ["Place charges".into(), "Placing Charges".into()],
+            ["Move charges".into(), "Moving Charges".into()],
+            ["Alter velocities".into(), "Altering velocities".into()],
+            ["Alter charge".into(), "Altering Charges".into()],
+        ],
+        group_width,
+        group_height,
+        button_builder,
+    );
 
     let (mut button_group_ent, mut button_ents) = (None, None);
     commands
