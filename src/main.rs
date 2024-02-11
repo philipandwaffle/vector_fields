@@ -7,6 +7,7 @@ use bevy::{math::vec2, prelude::*, window::WindowMode};
 use cam::CamPlugin;
 use charge::{Charge, Charges};
 use charge_editor::{charge_editor::ChargeEditorPlugin, ui_elements::UIPlugin};
+use controls::ControlPlugin;
 use initializer::Initializer;
 use json_parser::JSONParser;
 use setting::Settings;
@@ -16,6 +17,7 @@ use vector_field::VectorField;
 mod cam;
 mod charge;
 mod charge_editor;
+mod controls;
 mod initializer;
 mod json_parser;
 mod setting;
@@ -62,6 +64,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             CamPlugin,
             ChargeEditorPlugin,
             UIPlugin,
+            ControlPlugin,
         ));
 
     app.run();

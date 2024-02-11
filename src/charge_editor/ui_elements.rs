@@ -3,7 +3,7 @@ use std::usize;
 use bevy::{
     app::{Plugin, Update},
     ecs::{
-        component::Component,
+        component::{Component, TableStorage},
         entity::Entity,
         query::{Changed, With},
         system::{Commands, Query},
@@ -120,7 +120,7 @@ fn update_grouped_button(
 
 #[derive(Component)]
 pub struct ButtonGroup {
-    cur_button: Option<usize>,
+    pub cur_button: Option<usize>,
     button_ents: Vec<Entity>,
 }
 impl ButtonGroup {
@@ -162,18 +162,25 @@ impl ButtonGroupBuilder {
         }
     }
 
-    pub fn build(&self, cb: &mut ChildBuilder) -> (Entity, Vec<Entity>) {
+    pub fn build(
+        &self,
+        cb: &mut ChildBuilder,
+        tagging_component: impl Component<Storage = TableStorage>,
+    ) -> (Entity, Vec<Entity>) {
         let mut button_ents = Vec::with_capacity(self.text.len());
-        let mut button_group = cb.spawn(NodeBundle {
-            style: Style {
-                width: Val::Percent(self.width),
-                height: Val::Percent(self.height),
-                justify_content: JustifyContent::SpaceEvenly,
+        let mut button_group = cb.spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(self.width),
+                    height: Val::Percent(self.height),
+                    justify_content: JustifyContent::SpaceEvenly,
+                    ..default()
+                },
+                background_color: BACKGROUND_COLOR.into(),
                 ..default()
             },
-            background_color: BACKGROUND_COLOR.into(),
-            ..default()
-        });
+            tagging_component,
+        ));
         let button_group_ent = button_group.id();
 
         button_group.with_children(|p| {
