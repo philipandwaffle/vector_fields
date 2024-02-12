@@ -1,15 +1,24 @@
+use super::{
+    icons::{IconBuilder, IconBuilders},
+    ui_elements::{ButtonBuilder, ButtonGroup, ButtonGroupBuilder},
+};
+use crate::{
+    charge::{self, Charge, Charges},
+    controls::state::ControlState,
+    setting::Settings,
+};
 use bevy::{
     ecs::{
         component::Component,
+        entity::Entity,
         query::{Changed, With},
-        system::{Commands, Query, ResMut, Resource},
+        system::{Commands, Query, Res, ResMut, Resource},
     },
     hierarchy::BuildChildren,
+    math::{vec2, Vec2},
     prelude::default,
     ui::{node_bundles::NodeBundle, JustifyContent, Style, Val},
 };
-
-use super::ui_elements::{ButtonBuilder, ButtonGroup, ButtonGroupBuilder};
 
 pub enum Mode {
     None,
@@ -21,10 +30,16 @@ pub enum Mode {
 #[derive(Resource)]
 pub struct EditorState {
     mode: Mode,
+    charge_icons: Vec<Entity>,
+    arrow_icons: Vec<Entity>,
 }
 impl EditorState {
     pub fn new() -> Self {
-        Self { mode: Mode::None }
+        Self {
+            mode: Mode::None,
+            charge_icons: vec![],
+            arrow_icons: vec![],
+        }
     }
 }
 
@@ -96,7 +111,41 @@ pub fn update_editor_mode(
     }
 }
 
-fn place_charge() {}
+pub fn handle_input(
+    mut commands: Commands,
+    mut control_state: ResMut<ControlState>,
+    mut charges: ResMut<Charges>,
+    mut editor_state: ResMut<EditorState>,
+    builders: Res<IconBuilders>,
+    settings: Res<Settings>,
+) {
+    match editor_state.mode {
+        Mode::None => return,
+        Mode::Create => {
+            if control_state.double_click {
+                control_state.double_click = false;
+
+                let id = charges.charges.len();
+                let world_pos = control_state.mouse_world_pos;
+                let pos = world_pos / settings.simulation.scale;
+
+                let charge_ent =
+                    builders
+                        .charge
+                        .build_charge(&mut commands, control_state.mouse_world_pos, id);
+                editor_state.charge_icons.insert(id, charge_ent);
+
+                charges
+                    .charges
+                    .insert(id, Charge::new(1.0, 1.0, pos, vec2(0.0, 0.0)));
+            }
+        }
+        Mode::Move => todo!(),
+        Mode::Velocity => todo!(),
+        Mode::Charge => todo!(),
+    }
+}
+
 fn move_charge() {}
 fn edit_velocity() {}
 fn edit_charge() {}

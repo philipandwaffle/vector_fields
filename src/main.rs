@@ -37,17 +37,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     let resolution = settings.display.clone().as_resolution();
     let vf_size = settings.simulation.field.size;
     let vf_res = settings.simulation.field.resolution;
-    let charges = JSONParser::load::<Charges>("assets/saves/charges.json")?;
+    let charges = JSONParser::load::<Charges>("assets/saves/empty.json")?;
     electric_field_system(&mut app);
 
     app.insert_resource(Msaa::Sample4)
         .insert_resource(settings)
         .insert_resource(VectorField::new(vf_size, vf_res))
-        .insert_resource(CurCharge::default())
+        // .insert_resource(CurCharge::default())
         .insert_resource(charges)
         .insert_resource(SystemStatus::default())
         .add_systems(Startup, init_vector_field)
-        .add_systems(Update, change_charge_list)
+        // .add_systems(Update, change_charge_list)
         .add_plugins((
             DefaultPlugins
                 .set(WindowPlugin {
@@ -86,7 +86,12 @@ fn init_vector_field(
     let vector = settings.simulation.vector.clone();
     let arrow_texture = asset_server.load(vector.texture);
 
-    vector_field.init(&mut commands, arrow_texture, vector.spacing, vector.size);
+    vector_field.init(
+        &mut commands,
+        arrow_texture,
+        settings.simulation.scale,
+        vector.size,
+    );
 }
 
 #[derive(Resource, Default)]

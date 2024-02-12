@@ -20,7 +20,7 @@ pub struct ControlState {
     pub left_mouse_down: bool,
     pub left_mouse_up: bool,
     pub double_click: bool,
-    pub world_mouse_pos: Vec2,
+    pub mouse_world_pos: Vec2,
 }
 impl Default for ControlState {
     fn default() -> Self {
@@ -28,7 +28,7 @@ impl Default for ControlState {
             left_mouse_down: false,
             left_mouse_up: false,
             double_click: false,
-            world_mouse_pos: Vec2::ZERO,
+            mouse_world_pos: Vec2::ZERO,
         }
     }
 }
@@ -80,6 +80,6 @@ pub fn update_control_state(
         .and_then(|cursor| c.viewport_to_world(t, cursor))
         .map(|ray| ray.origin.truncate())
     {
-        control_state.world_mouse_pos = world_mouse_pos;
+        control_state.mouse_world_pos = world_mouse_pos;
     }
 }

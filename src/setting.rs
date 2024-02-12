@@ -9,6 +9,7 @@ use crate::json_parser::JSONParser;
 pub struct Settings {
     pub display: Display,
     pub simulation: Simulation,
+    pub icons: Icons,
 }
 impl Settings {
     pub fn set_display(&mut self, display: Display) {
@@ -39,6 +40,7 @@ impl Display {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Simulation {
     pub time_scale: f32,
+    pub scale: f32,
     pub field: Field,
     pub vector: Vector,
 }
@@ -53,5 +55,10 @@ pub struct Field {
 pub struct Vector {
     pub texture: String,
     pub size: f32,
-    pub spacing: f32,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct Icons {
+    pub charge_size: f32,
+    pub arrow_size: f32,
 }

@@ -1,9 +1,12 @@
 use bevy::app::{Plugin, Update};
 
-use self::{bindings::Bindings, state::{update_control_state, ControlState}};
+use self::{
+    bindings::Bindings,
+    state::{update_control_state, ControlState},
+};
 
 mod bindings;
-mod state;
+pub mod state;
 
 pub struct ControlPlugin;
 impl Plugin for ControlPlugin {

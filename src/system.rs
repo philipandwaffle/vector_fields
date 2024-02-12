@@ -21,7 +21,7 @@ impl Default for SystemStatus {
     fn default() -> Self {
         Self {
             update_field: true,
-            move_charges: true,
+            move_charges: false,
         }
     }
 }
