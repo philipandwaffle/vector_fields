@@ -1,5 +1,4 @@
 use bevy::{
-    app::{Plugin, Startup, Update},
     ecs::{
         component::Component,
         query::{Changed, With},
@@ -11,15 +10,6 @@ use bevy::{
 };
 
 use super::ui_elements::{ButtonBuilder, ButtonGroup, ButtonGroupBuilder};
-
-pub struct ChargeEditorPlugin;
-impl Plugin for ChargeEditorPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(EditorState::new())
-            .add_systems(Startup, spawn_ui)
-            .add_systems(Update, update_editor_mode);
-    }
-}
 
 pub enum Mode {
     None,
@@ -33,15 +23,15 @@ pub struct EditorState {
     mode: Mode,
 }
 impl EditorState {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { mode: Mode::None }
     }
 }
 
 #[derive(Component)]
-struct ButtonGroupTag;
+pub struct ButtonGroupTag;
 
-fn spawn_ui(mut commands: Commands) {
+pub fn spawn_ui(mut commands: Commands) {
     let (button_width, button_height) = (24.5, 95.0);
     let button_builder = ButtonBuilder::new(
         Some("normal_text".to_string()),
@@ -83,7 +73,7 @@ fn spawn_ui(mut commands: Commands) {
     ButtonGroupBuilder::assign_button_group_component(&mut commands, button_group_ent, button_ents);
 }
 
-fn update_editor_mode(
+pub fn update_editor_mode(
     mut editor_state: ResMut<EditorState>,
     button_group: Query<&ButtonGroup, (Changed<ButtonGroup>, With<ButtonGroupTag>)>,
 ) {
@@ -108,7 +98,5 @@ fn update_editor_mode(
 
 fn place_charge() {}
 fn move_charge() {}
-fn edit_velocity(){}
-fn edit_charge(){
-
-}
+fn edit_velocity() {}
+fn edit_charge() {}

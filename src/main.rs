@@ -1,14 +1,19 @@
-use std::{
-    error::Error,
-    time::{Duration, Instant},
-};
+use std::{error::Error, time::Duration};
 
-use bevy::{math::vec2, prelude::*, window::WindowMode};
+use bevy::{
+    app::{App, PluginGroup, Startup, Update},
+    asset::AssetServer,
+    ecs::system::{Commands, Res, ResMut, Resource},
+    render::{texture::ImagePlugin, view::Msaa},
+    time::{Time, Timer, TimerMode},
+    utils::default,
+    window::{Window, WindowMode, WindowPlugin},
+    DefaultPlugins,
+};
 use cam::CamPlugin;
-use charge::{Charge, Charges};
-use charge_editor::{charge_editor::ChargeEditorPlugin, ui_elements::UIPlugin};
+use charge::Charges;
+use charge_editor::{ui_elements::UIPlugin, ChargeEditorPlugin};
 use controls::ControlPlugin;
-use initializer::Initializer;
 use json_parser::JSONParser;
 use setting::Settings;
 use system::{electric_field_system, SystemStatus};
