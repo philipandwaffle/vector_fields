@@ -73,10 +73,10 @@ impl Charges {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Charge {
-    q: f32,
-    m: f32,
-    p: Vec2,
-    v: Vec2,
+    pub q: f32,
+    pub m: f32,
+    pub p: Vec2,
+    pub v: Vec2,
 }
 impl Charge {
     pub fn new(q: f32, m: f32, p: Vec2, v: Vec2) -> Self {

@@ -3,8 +3,10 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        system::{Commands, Res, Resource},
+        query::With,
+        system::{Commands, Query, Res, Resource},
     },
+    hierarchy::ChildBuilder,
     math::{vec2, Vec2},
     render::{color::Color, texture::Image},
     sprite::{Anchor, Sprite, SpriteBundle},
@@ -12,13 +14,13 @@ use bevy::{
     utils::default,
 };
 
-use crate::setting::Settings;
+use crate::{controls::state::ControlState, setting::Settings};
 
 #[derive(Component)]
 pub struct Dragging;
 #[derive(Component)]
 pub struct ChargeIcon {
-    id: usize,
+    pub id: usize,
 }
 #[derive(Component)]
 pub struct ArrowIcon {
@@ -81,7 +83,25 @@ impl IconBuilder {
             ))
             .id()
     }
-    pub fn build_arrow(commands: &mut Commands) {}
+    pub fn build_arrow(&self, commands: &mut ChildBuilder) -> Entity {
+        commands
+            .spawn(SpriteBundle {
+                sprite: Sprite {
+                    color: Color::Hsla {
+                        hue: 0.5,
+                        saturation: 1.0,
+                        lightness: 1.0,
+                        alpha: 1.0,
+                    },
+                    custom_size: Some(vec2(self.size, self.size)),
+                    anchor: self.anchor,
+                    ..default()
+                },
+                texture: self.icon.clone(),
+                ..default()
+            })
+            .id()
+    }
 }
 
 pub fn setup_builders(
@@ -95,4 +115,14 @@ pub fn setup_builders(
         asset_server.load("white_arrow.png"),
         settings.icons.arrow_size,
     ))
+}
+
+pub fn drag_icons(
+    mut dragging: Query<&mut Transform, With<Dragging>>,
+    control_state: Res<ControlState>,
+) {
+    for mut transfom in dragging.iter_mut() {
+        let z = transfom.translation.z;
+        transfom.translation = control_state.mouse_world_pos.extend(z);
+    }
 }

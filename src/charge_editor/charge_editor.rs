@@ -1,5 +1,5 @@
 use super::{
-    icons::{IconBuilder, IconBuilders},
+    icons::{ChargeIcon, Dragging, IconBuilder, IconBuilders},
     ui_elements::{ButtonBuilder, ButtonGroup, ButtonGroupBuilder},
 };
 use crate::{
@@ -9,6 +9,7 @@ use crate::{
 };
 use bevy::{
     ecs::{
+        change_detection::DetectChanges,
         component::Component,
         entity::Entity,
         query::{Changed, With},
@@ -17,6 +18,7 @@ use bevy::{
     hierarchy::BuildChildren,
     math::{vec2, Vec2},
     prelude::default,
+    transform::{commands, components::Transform},
     ui::{node_bundles::NodeBundle, JustifyContent, Style, Val},
 };
 
@@ -111,7 +113,16 @@ pub fn update_editor_mode(
     }
 }
 
-pub fn handle_input(
+pub fn update_icons(charges: Res<Charges>) {
+    if !charges.is_changed() {
+        return;
+    }
+}
+
+pub fn if_create_charge(editor_state: Res<EditorState>) -> bool {
+    return matches!(editor_state.mode, Mode::Create);
+}
+pub fn create_charge(
     mut commands: Commands,
     mut control_state: ResMut<ControlState>,
     mut charges: ResMut<Charges>,
@@ -119,33 +130,57 @@ pub fn handle_input(
     builders: Res<IconBuilders>,
     settings: Res<Settings>,
 ) {
-    match editor_state.mode {
-        Mode::None => return,
-        Mode::Create => {
-            if control_state.double_click {
-                control_state.double_click = false;
+    if !control_state.double_click {
+        return;
+    }
+    control_state.double_click = false;
 
-                let id = charges.charges.len();
-                let world_pos = control_state.mouse_world_pos;
-                let pos = world_pos / settings.simulation.scale;
+    let id = charges.charges.len();
+    let world_pos = control_state.mouse_world_pos;
+    let pos = world_pos / settings.simulation.scale;
 
-                let charge_ent =
-                    builders
-                        .charge
-                        .build_charge(&mut commands, control_state.mouse_world_pos, id);
-                editor_state.charge_icons.insert(id, charge_ent);
+    let charge_ent = builders
+        .charge
+        .build_charge(&mut commands, control_state.mouse_world_pos, id);
+    editor_state.charge_icons.insert(id, charge_ent);
 
-                charges
-                    .charges
-                    .insert(id, Charge::new(1.0, 1.0, pos, vec2(0.0, 0.0)));
-            }
+    charges
+        .charges
+        .insert(id, Charge::new(1.0, 1.0, pos, vec2(0.0, 0.0)));
+}
+
+pub fn if_move_charge(editor_state: Res<EditorState>) -> bool {
+    return matches!(editor_state.mode, Mode::Move);
+}
+pub fn move_charge(
+    mut charge_icons: Query<(&mut Transform, &ChargeIcon)>,
+    mut charges: ResMut<Charges>,
+    control_state: Res<ControlState>,
+    settings: Res<Settings>,
+) {
+    if !control_state.left_mouse_down {
+        return;
+    }
+    let mouse_world_pos = control_state.mouse_world_pos;
+    for (mut transfom, icon) in charge_icons.iter_mut() {
+        let dir = mouse_world_pos - transfom.translation.truncate();
+        if dir.length_squared() > settings.icons.charge_size.powi(2) {
+            continue;
         }
-        Mode::Move => todo!(),
-        Mode::Velocity => todo!(),
-        Mode::Charge => todo!(),
+
+        let z = transfom.translation.z;
+        transfom.translation = mouse_world_pos.extend(z);
+        charges.charges[icon.id].p = mouse_world_pos / settings.simulation.scale;
+        return;
     }
 }
 
-fn move_charge() {}
-fn edit_velocity() {}
-fn edit_charge() {}
+pub fn if_edit_velocity(editor_state: Res<EditorState>) -> bool {
+    return matches!(editor_state.mode, Mode::Velocity);
+}
+pub fn edit_velocity() {}
+
+pub fn if_edit_charge(editor_state: Res<EditorState>) -> bool {
+    return matches!(editor_state.mode, Mode::Charge);
+}
+pub fn edit_charge() {}
