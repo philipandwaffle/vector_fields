@@ -6,8 +6,8 @@ use bevy::{
         query::With,
         system::{Commands, Query, Res, Resource},
     },
-    hierarchy::ChildBuilder,
-    math::{vec2, Vec2},
+    hierarchy::{BuildChildren, ChildBuilder},
+    math::{vec2, vec3, Vec2},
     render::{color::Color, texture::Image},
     sprite::{Anchor, Sprite, SpriteBundle},
     transform::components::Transform,
@@ -59,9 +59,10 @@ pub struct IconBuilder {
     size: f32,
     anchor: Anchor,
 }
-impl IconBuilder {
-    pub fn build_charge(&self, commands: &mut Commands, pos: Vec2, id: usize) -> Entity {
-        commands
+impl IconBuilders {
+    pub fn build_charge(&self, commands: &mut Commands, pos: Vec2, id: usize) -> (Entity, Entity) {
+        let mut arrow_ent = Entity::PLACEHOLDER;
+        let charge_ent = commands
             .spawn((
                 SpriteBundle {
                     sprite: Sprite {
@@ -71,17 +72,22 @@ impl IconBuilder {
                             lightness: 1.0,
                             alpha: 1.0,
                         },
-                        custom_size: Some(vec2(self.size, self.size)),
-                        anchor: self.anchor,
+                        custom_size: Some(vec2(self.charge.size, self.charge.size)),
+                        anchor: self.charge.anchor,
                         ..default()
                     },
-                    texture: self.icon.clone(),
                     transform: Transform::from_translation(pos.extend(1.0)),
+                    texture: self.charge.icon.clone(),
                     ..default()
                 },
                 ChargeIcon { id },
             ))
-            .id()
+            .with_children(|p| {
+                arrow_ent = self.build_arrow(p);
+            })
+            .id();
+
+        (charge_ent, arrow_ent)
     }
     pub fn build_arrow(&self, commands: &mut ChildBuilder) -> Entity {
         commands
@@ -93,11 +99,16 @@ impl IconBuilder {
                         lightness: 1.0,
                         alpha: 1.0,
                     },
-                    custom_size: Some(vec2(self.size, self.size)),
-                    anchor: self.anchor,
+                    custom_size: Some(vec2(self.arrow.size, self.arrow.size)),
+                    anchor: self.arrow.anchor,
                     ..default()
                 },
-                texture: self.icon.clone(),
+                transform: Transform {
+                    translation: vec3(0.0, 0.0, 2.0),
+                    scale: vec3(0.0, 1.0, 0.0),
+                    ..default()
+                },
+                texture: self.arrow.icon.clone(),
                 ..default()
             })
             .id()

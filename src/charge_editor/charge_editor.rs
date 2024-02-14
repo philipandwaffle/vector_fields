@@ -139,10 +139,11 @@ pub fn create_charge(
     let world_pos = control_state.mouse_world_pos;
     let pos = world_pos / settings.simulation.scale;
 
-    let charge_ent = builders
-        .charge
-        .build_charge(&mut commands, control_state.mouse_world_pos, id);
+    let (charge_ent, arrow_ent) =
+        builders.build_charge(&mut commands, control_state.mouse_world_pos, id);
+
     editor_state.charge_icons.insert(id, charge_ent);
+    editor_state.arrow_icons.insert(id, arrow_ent);
 
     charges
         .charges
