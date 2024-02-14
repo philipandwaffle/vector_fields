@@ -83,34 +83,37 @@ impl IconBuilders {
                 ChargeIcon { id },
             ))
             .with_children(|p| {
-                arrow_ent = self.build_arrow(p);
+                arrow_ent = self.build_arrow(p, id);
             })
             .id();
 
         (charge_ent, arrow_ent)
     }
-    pub fn build_arrow(&self, commands: &mut ChildBuilder) -> Entity {
+    pub fn build_arrow(&self, commands: &mut ChildBuilder, id: usize) -> Entity {
         commands
-            .spawn(SpriteBundle {
-                sprite: Sprite {
-                    color: Color::Hsla {
-                        hue: 0.5,
-                        saturation: 1.0,
-                        lightness: 1.0,
-                        alpha: 1.0,
+            .spawn((
+                SpriteBundle {
+                    sprite: Sprite {
+                        color: Color::Hsla {
+                            hue: 0.5,
+                            saturation: 1.0,
+                            lightness: 1.0,
+                            alpha: 1.0,
+                        },
+                        custom_size: Some(vec2(self.arrow.size, self.arrow.size)),
+                        anchor: self.arrow.anchor,
+                        ..default()
                     },
-                    custom_size: Some(vec2(self.arrow.size, self.arrow.size)),
-                    anchor: self.arrow.anchor,
+                    transform: Transform {
+                        translation: vec3(0.0, 0.0, 2.0),
+                        scale: vec3(0.0, 1.0, 0.0),
+                        ..default()
+                    },
+                    texture: self.arrow.icon.clone(),
                     ..default()
                 },
-                transform: Transform {
-                    translation: vec3(0.0, 0.0, 2.0),
-                    scale: vec3(0.0, 1.0, 0.0),
-                    ..default()
-                },
-                texture: self.arrow.icon.clone(),
-                ..default()
-            })
+                ArrowIcon { id },
+            ))
             .id()
     }
 }

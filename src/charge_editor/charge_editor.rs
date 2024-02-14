@@ -1,24 +1,25 @@
 use super::{
-    icons::{ChargeIcon, Dragging, IconBuilder, IconBuilders},
+    icons::{ArrowIcon, ChargeIcon, IconBuilders},
     ui_elements::{ButtonBuilder, ButtonGroup, ButtonGroupBuilder},
 };
 use crate::{
-    charge::{self, Charge, Charges},
+    charge::{Charge, Charges},
     controls::state::ControlState,
     setting::Settings,
+    utils,
 };
 use bevy::{
     ecs::{
         change_detection::DetectChanges,
         component::Component,
         entity::Entity,
-        query::{Changed, With},
+        query::{Changed, With, Without},
         system::{Commands, Query, Res, ResMut, Resource},
     },
-    hierarchy::BuildChildren,
-    math::{vec2, Vec2},
+    hierarchy::{BuildChildren, Children},
+    math::vec2,
     prelude::default,
-    transform::{commands, components::Transform},
+    transform::components::Transform,
     ui::{node_bundles::NodeBundle, JustifyContent, Style, Val},
 };
 
@@ -32,6 +33,7 @@ pub enum Mode {
 #[derive(Resource)]
 pub struct EditorState {
     mode: Mode,
+    cur_charge_index: Option<usize>,
     charge_icons: Vec<Entity>,
     arrow_icons: Vec<Entity>,
 }
@@ -39,6 +41,7 @@ impl EditorState {
     pub fn new() -> Self {
         Self {
             mode: Mode::None,
+            cur_charge_index: None,
             charge_icons: vec![],
             arrow_icons: vec![],
         }
@@ -162,15 +165,16 @@ pub fn move_charge(
     if !control_state.left_mouse_down {
         return;
     }
+
     let mouse_world_pos = control_state.mouse_world_pos;
-    for (mut transfom, icon) in charge_icons.iter_mut() {
-        let dir = mouse_world_pos - transfom.translation.truncate();
+    for (mut transform, icon) in charge_icons.iter_mut() {
+        let dir = mouse_world_pos - transform.translation.truncate();
         if dir.length_squared() > settings.icons.charge_size.powi(2) {
             continue;
         }
 
-        let z = transfom.translation.z;
-        transfom.translation = mouse_world_pos.extend(z);
+        let z = transform.translation.z;
+        transform.translation = mouse_world_pos.extend(z);
         charges.charges[icon.id].p = mouse_world_pos / settings.simulation.scale;
         return;
     }
@@ -179,7 +183,48 @@ pub fn move_charge(
 pub fn if_edit_velocity(editor_state: Res<EditorState>) -> bool {
     return matches!(editor_state.mode, Mode::Velocity);
 }
-pub fn edit_velocity() {}
+pub fn edit_velocity(
+    charge_icons: Query<(&Transform, &ChargeIcon)>,
+    mut arrow_icons: Query<&mut Transform, (With<ArrowIcon>, Without<ChargeIcon>)>,
+    mut editor_state: ResMut<EditorState>,
+    mut charges: ResMut<Charges>,
+    control_state: Res<ControlState>,
+    settings: Res<Settings>,
+) {
+    if control_state.left_mouse_just_down {
+        editor_state.cur_charge_index = None;
+        for (transform, charge_icon) in charge_icons.iter() {
+            let dir = control_state.mouse_world_pos - transform.translation.truncate();
+            if dir.length_squared() > settings.icons.charge_size.powi(2) {
+                continue;
+            }
+
+            editor_state.cur_charge_index = Some(charge_icon.id);
+        }
+    }
+
+    if control_state.left_mouse_down {
+        if let Some(i) = editor_state.cur_charge_index {
+            let charge_pos = match charge_icons.get(editor_state.charge_icons[i]) {
+                Ok((transform, _)) => transform.translation.truncate(),
+                Err(err) => panic!("Charge not found when trying to edit velocity, {:?}", err),
+            };
+
+            let vel = (control_state.mouse_world_pos - charge_pos) / settings.simulation.scale;
+            match arrow_icons.get_mut(editor_state.arrow_icons[i]) {
+                Ok(mut transform) => {
+                    transform.scale.x = vel.length();
+                    transform.rotation = utils::dir_to_quat(vel);
+                    charges.charges[i].v = vel;
+                }
+                Err(err) => panic!(
+                    "Velocity arrow not found when trying to edit velocity, {:?}",
+                    err
+                ),
+            }
+        }
+    }
+}
 
 pub fn if_edit_charge(editor_state: Res<EditorState>) -> bool {
     return matches!(editor_state.mode, Mode::Charge);

@@ -19,6 +19,7 @@ use super::bindings::Bindings;
 pub struct ControlState {
     pub left_mouse_down: bool,
     pub left_mouse_up: bool,
+    pub left_mouse_just_down: bool,
     pub double_click: bool,
     pub mouse_world_pos: Vec2,
 }
@@ -27,6 +28,7 @@ impl Default for ControlState {
         Self {
             left_mouse_down: false,
             left_mouse_up: false,
+            left_mouse_just_down: false,
             double_click: false,
             mouse_world_pos: Vec2::ZERO,
         }
@@ -66,6 +68,7 @@ pub fn update_control_state(
     mut double_click: Local<DoubleClick>,
 ) {
     control_state.left_mouse_down = mouse.pressed(MouseButton::Left);
+    control_state.left_mouse_just_down = mouse.just_pressed(MouseButton::Left);
     if mouse.just_released(MouseButton::Left) {
         control_state.left_mouse_up = true;
         if double_click.is_double_click(bindings.double_click_window) {
