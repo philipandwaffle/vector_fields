@@ -141,6 +141,71 @@ pub struct GroupedButton {
     id: usize,
 }
 
+pub struct ButtonArrayBuilder {
+    text: Vec<[Option<String>; 3]>,
+    tagging_components: Vec<Box<dyn Component<Storage = TableStorage>>>,
+    width: f32,
+    height: f32,
+    button_builder: ButtonBuilder,
+}
+impl ButtonArrayBuilder {
+    pub fn new(
+        text: Vec<[Option<String>; 3]>,
+        tagging_components: Vec<Box<dyn Component<Storage = TableStorage>>>,
+        width: f32,
+        height: f32,
+        button_builder: ButtonBuilder,
+    ) -> Self {
+        Self {
+            text,
+            tagging_components,
+            width,
+            height,
+            button_builder,
+        }
+    }
+
+    pub fn build(
+        &self,
+        cb: &mut ChildBuilder,
+        tagging_component: impl Component<Storage = TableStorage>,
+    ) -> Vec<Entity> {
+        let mut button_ents = Vec::with_capacity(self.text.len());
+        let mut button_group = cb.spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(self.width),
+                    height: Val::Percent(self.height),
+                    justify_content: JustifyContent::SpaceEvenly,
+                    ..default()
+                },
+                background_color: BACKGROUND_COLOR.into(),
+                ..default()
+            },
+            tagging_component,
+        ));
+        let button_group_ent = button_group.id();
+
+        button_group.with_children(|p| {
+            for i in 0..self.text.len() {
+                let [normal, hover, pressed] = self.text[i].clone();
+                button_ents.push(self.button_builder.build(
+                    p,
+                    i,
+                    ButtonMeta {
+                        cosmetic_state: CosmeticState::None,
+                        normal_text: normal,
+                        hover_text: hover,
+                        pressed_text: pressed,
+                    },
+                ));
+            }
+        });
+
+        button_ents
+    }
+}
+
 pub struct ButtonGroupBuilder {
     text: Vec<[String; 2]>,
     width: f32,
@@ -236,7 +301,6 @@ pub struct ButtonMeta {
 
 #[derive(Clone)]
 pub struct ButtonBuilder {
-    meta: ButtonMeta,
     width: f32,
     height: f32,
 }
@@ -248,16 +312,7 @@ impl ButtonBuilder {
         width: f32,
         height: f32,
     ) -> Self {
-        Self {
-            meta: ButtonMeta {
-                cosmetic_state: CosmeticState::None,
-                normal_text,
-                hover_text,
-                pressed_text,
-            },
-            width,
-            height,
-        }
+        Self { width, height }
     }
 
     fn get_button_bundle(&self) -> ButtonBundle {
@@ -294,8 +349,8 @@ impl ButtonBuilder {
         GroupedButton { id }
     }
 
-    pub fn build(&self, cb: &mut ChildBuilder) -> Entity {
-        cb.spawn((self.get_button_bundle(), self.meta.clone()))
+    pub fn build(&self, cb: &mut ChildBuilder, meta: ButtonMeta) -> Entity {
+        cb.spawn((self.get_button_bundle(), meta.clone()))
             .with_children(|p| {
                 p.spawn(self.get_text_bundle());
             })

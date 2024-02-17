@@ -50,16 +50,12 @@ impl EditorState {
 
 #[derive(Component)]
 pub struct ButtonGroupTag;
+#[derive(Component)]
+pub struct PauseButtonTag;
 
 pub fn spawn_ui(mut commands: Commands) {
     let (button_width, button_height) = (24.5, 95.0);
-    let button_builder = ButtonBuilder::new(
-        Some("normal_text".to_string()),
-        Some("hover_text".to_string()),
-        Some("pressed_text".to_string()),
-        button_width,
-        button_height,
-    );
+    let button_builder = ButtonBuilder::new(None, None, None, button_width, button_height);
 
     let (group_width, group_height) = (100.0, 20.0);
     let grouped_button_builder = ButtonGroupBuilder::new(
@@ -89,6 +85,10 @@ pub fn spawn_ui(mut commands: Commands) {
             let (temp_button_group_ent, temp_button_ents) =
                 grouped_button_builder.build(p, ButtonGroupTag);
             (button_group_ent, button_ents) = (Some(temp_button_group_ent), Some(temp_button_ents));
+
+            p.spawn(bundle)
+            let (button_width, button_height) = (24.5, 95.0);
+            let button_builder = ButtonBuilder::new(None, None, None, button_width, button_height);
         });
     ButtonGroupBuilder::assign_button_group_component(&mut commands, button_group_ent, button_ents);
 }
